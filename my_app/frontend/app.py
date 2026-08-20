@@ -1,7 +1,8 @@
+import os
 import streamlit as st
 import requests
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(
     page_title="Task Manager",
@@ -55,6 +56,7 @@ def remove_task(task_id: int):
 
 st.title("✅ Task Manager")
 
+# Fetch tasks FIRST so metrics are calculated on fresh data
 tasks = fetch_tasks()
 
 # Metrics Summary
@@ -109,15 +111,21 @@ else:
             c1, c2, c3 = st.columns([0.1, 0.8, 0.1])
 
             with c1:
-                checked = st.checkbox(
+                # Use on_change callback to update state before the page re-renders
+                def handle_toggle(tid=task_id, current_status=is_completed):
+                    new_status = not current_status
+                    if toggle_task(tid, new_status):
+                        st.toast("Task status updated!", icon="🔄")
+                    else:
+                        st.error("Failed to update task")
+
+                st.checkbox(
                     "Complete",
                     value=is_completed,
                     key=f"check_{task_id}",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    on_change=handle_toggle
                 )
-                if checked != is_completed:
-                    if toggle_task(task_id, checked):
-                        st.rerun()
 
             with c2:
                 if is_completed:

@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -11,11 +12,16 @@ app = FastAPI(
 
 
 # -------------------------
-# Schema
+# Schemas
 # -------------------------
 
 class TaskCreate(BaseModel):
     title: str
+
+
+class TaskUpdate(BaseModel):
+    completed: Optional[bool] = None
+    title: Optional[str] = None
 
 
 # -------------------------
@@ -70,6 +76,42 @@ def create_task(task: TaskCreate):
         })
         .execute()
     )
+
+    return response.data
+
+
+# -------------------------
+# Update Task
+# -------------------------
+
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task: TaskUpdate):
+
+    update_data = {}
+    if task.completed is not None:
+        update_data["completed"] = task.completed
+    if task.title is not None:
+        update_data["title"] = task.title
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="No fields provided for update"
+        )
+
+    response = (
+        supabase
+        .table("tasks")
+        .update(update_data)
+        .eq("id", task_id)
+        .execute()
+    )
+
+    if not response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
 
     return response.data
 
